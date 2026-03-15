@@ -1,0 +1,81 @@
+{
+  "projectType": "saas",
+  "projectName": "Sena Shopping",
+  "projectDescription": "A React-based e-commerce frontend for SENA entrepreneurs to publish, manage, and sell products on a shared marketplace platform.",
+  "theme": "almond",
+  "primaryColor": "#09a6dd",
+  "lightColor": "#0e1544",
+  "darkColor": "#c6b3e6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/product-catalog",
+              "features/authentication",
+              "features/entrepreneur-panel",
+              "features/favorites",
+              "features/search-and-filters"
+            ]
+          },
+          {
+            "group": "Admin Panel",
+            "pages": [
+              "admin/overview",
+              "admin/manage-users",
+              "admin/manage-products",
+              "admin/reports"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/project-structure",
+              "architecture/routing",
+              "architecture/api-integration"
+            ]
+          },
+          {
+            "group": "Legal & Support",
+            "pages": [
+              "support/faq",
+              "support/terms",
+              "support/privacy"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Product catalog with search, category filtering, and price range filters",
+    "Role-based authentication (user, emprendedor, administrador)",
+    "Entrepreneur dashboard to create, edit, and delete products",
+    "Admin dashboard with platform statistics and PDF report generation",
+    "Favorites system for registered users",
+    "Password recovery and reset flow",
+    "Entrepreneur directory listing",
+    "Splash screen and skeleton loading states for improved UX",
+    "JWT-based session management with automatic logout on expiry"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/login",
+    "POST /api/auth/register",
+    "GET /api/products",
+    "GET /api/products/:id",
+    "GET /api/entrepreneurs/mis-productos",
+    "POST /api/entrepreneurs (create product)",
+    "PUT /api/entrepreneurs/:id (update product)",
+    "DELETE /api/entrepreneurs/:id",
+    "GET /api/admin/stats",
+    "GET /api/admin/usuarios",
+    "GET /api/admin/productos"
+  ]
+}
