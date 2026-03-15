@@ -1,0 +1,140 @@
+---
+title: "Admin dashboard"
+description: "Overview of the admin dashboard: platform statistics, category charts, and latest registrations — all in one view."
+---
+
+The admin dashboard is the control centre for the SENAshopping platform. It displays real-time statistics about users, entrepreneurs, products, and favorites, and provides quick access to user and product management.
+
+<Info>
+  The dashboard is protected by `ProtectedRoute` with `requiredRole="administrador"`. Any user without the `administrador` role is redirected to `/` when they try to access `/admin`.
+</Info>
+
+## Accessing the dashboard
+
+<Steps>
+  <Step title="Log in as an administrator">
+    Navigate to `/auth` and sign in with an account that has the role `administrador`. The JWT token and user object are stored in `localStorage` under the keys `token` and `user`.
+  </Step>
+  <Step title="Open the dashboard">
+    Navigate to `/admin`. The `ProtectedRoute` component reads `localStorage` and verifies both that a token exists and that `user.role === "administrador"` before rendering the page.
+
+    ```jsx
+    // src/components/ProtectedRoute/ProtectedRoute.jsx
+    const ProtectedRoute = ({ children, requiredRole }) => {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      if (!token) return <Navigate to="/auth" replace />;
+
+      if (requiredRole && user?.role !== requiredRole) {
+        return <Navigate to="/" replace />;
+      }
+
+      return children;
+    };
+    ```
+  </Step>
+</Steps>
+
+## Statistics API
+
+On mount, the dashboard fetches all statistics from a single endpoint:
+
+```javascript
+// src/pages/Admin/Dashboard.jsx
+useEffect(() => {
+  fetch("http://localhost:3000/api/admin/stats", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => res.json())
+    .then(setStats)
+    .catch(() => setStats(null))
+    .finally(() => setLoading(false));
+}, []);
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `totalUsuarios` | number | Total active registered users |
+| `totalEmprendedores` | number | Total active entrepreneur accounts |
+| `pendientes` | number | Accounts awaiting approval |
+| `totalProductos` | number | Total published products |
+| `totalFavoritos` | number | Total favorites saved across all users |
+| `productosPorCategoria` | array | Each category with a `categoria` and `total` field |
+| `ultimosUsuarios` | array | Most recently registered users |
+
+## Summary cards
+
+The top section of the dashboard renders five summary cards, one for each statistic.
+
+<CardGroup cols={3}>
+  <Card title="Usuarios activos" icon="users">
+    Total number of active registered users on the platform (`totalUsuarios`).
+  </Card>
+  <Card title="Emprendedores activos" icon="handshake">
+    Total number of active entrepreneur accounts (`totalEmprendedores`).
+  </Card>
+  <Card title="Pendientes de aprobación" icon="clock">
+    Entrepreneur accounts awaiting admin review (`pendientes`). This card renders with an alert style and a **Revisar →** link to `/admin/usuarios` when `pendientes > 0`.
+  </Card>
+  <Card title="Productos publicados" icon="box">
+    Total products currently listed on the platform (`totalProductos`).
+  </Card>
+  <Card title="Favoritos guardados" icon="heart">
+    Total number of times users have saved a product to their favorites list (`totalFavoritos`).
+  </Card>
+</CardGroup>
+
+<Tip>
+  When the **Pendientes de aprobación** card shows a non-zero count, a **Revisar →** link appears directly on the card. Clicking it takes you straight to `/admin/usuarios` where the pending accounts are listed first.
+</Tip>
+
+## Products by category
+
+Below the summary cards, a bar chart section shows how products are distributed across categories. Each row displays:
+
+- The category name
+- A proportional fill bar calculated as `(cat.total / stats.totalProductos) * 100%`
+- The raw product count for that category
+
+This gives an instant visual sense of which categories dominate the catalogue without leaving the dashboard.
+
+## Latest registrations
+
+The **Últimos registros** section lists the most recently registered users. Each row shows:
+
+- An avatar with the user's first initial
+- Full name and email address
+- A role badge
+- A status badge
+
+### Role badges
+
+| Role | Badge colour |
+|---|---|
+| `emprendedor` | Green |
+| `usuario` | Blue / grey |
+
+### Status badges
+
+| Status | Badge colour |
+|---|---|
+| `activo` | Green |
+| `pendiente` | Yellow |
+| `inactivo` | Red |
+
+A **Ver todos →** link at the top-right of this section navigates to `/admin/usuarios`.
+
+## Admin navigation
+
+<CardGroup cols={3}>
+  <Card title="Dashboard" icon="gauge" href="/admin/overview">
+    Platform statistics, category chart, and latest registrations. Route: `/admin`.
+  </Card>
+  <Card title="Gestionar Productos" icon="box" href="/admin/manage-products">
+    List, view, and delete all products on the platform. Route: `/admin/productos`.
+  </Card>
+  <Card title="Gestionar Usuarios" icon="users" href="/admin/manage-users">
+    Approve, reject, block, and unblock user accounts. Route: `/admin/usuarios`.
+  </Card>
+</CardGroup>

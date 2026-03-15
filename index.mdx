@@ -1,97 +1,98 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Sena Shopping"
+description: "The e-commerce platform connecting SENA entrepreneurs with customers across Colombia."
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get the project running locally in minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Product Catalog" icon="shop" href="/features/product-catalog">
+    Browse and filter products by category and price
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Entrepreneur Panel" icon="briefcase" href="/features/entrepreneur-panel">
+    Publish and manage your products on the platform
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Admin Dashboard" icon="chart-bar" href="/admin/overview">
+    Monitor platform stats and manage users and products
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Sena Shopping?
 
-Everything you need to create world-class documentation.
+Sena Shopping is a marketplace platform built for SENA (Servicio Nacional de Aprendizaje) entrepreneurs to showcase and sell their products. Customers can discover products, save favorites, and contact entrepreneurs — while administrators maintain full oversight of the platform.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<Info>
+  This is a React + Vite frontend application. It connects to a backend REST API running at `http://localhost:3000/api`.
+</Info>
 
-## Need inspiration?
+## Platform roles
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+The platform supports three distinct user roles, each with its own set of capabilities:
+
+<CardGroup cols={3}>
+  <Card title="Customer" icon="user">
+    Browse products, search by keyword, filter by category and price, save favorites, and view entrepreneur profiles.
+  </Card>
+  <Card title="Entrepreneur" icon="store">
+    Register as an entrepreneur, publish products with images and pricing, edit or delete listings, and manage your profile.
+  </Card>
+  <Card title="Administrator" icon="shield">
+    Access the admin dashboard, approve or reject entrepreneur accounts, manage all products and users, and generate PDF reports.
+  </Card>
+</CardGroup>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Product catalog" icon="grid" href="/features/product-catalog">
+    Full product listing with category filtering, price range controls, and sort options (newest, lowest price, highest price).
+  </Card>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    JWT-based login and registration with automatic session expiry handling and password recovery flow.
+  </Card>
+  <Card title="Search" icon="magnifying-glass" href="/features/search-and-filters">
+    Real-time search across product names, descriptions, categories, and entrepreneur names.
+  </Card>
+  <Card title="Favorites" icon="heart" href="/features/favorites">
+    Save products to a personal favorites list accessible from any device after login.
+  </Card>
+  <Card title="Entrepreneur panel" icon="pen-to-square" href="/features/entrepreneur-panel">
+    Create, edit, and delete product listings with image upload via Cloudinary integration.
+  </Card>
+  <Card title="Admin panel" icon="gauge" href="/admin/overview">
+    Dashboard with platform statistics, user management, product moderation, and PDF report generation.
+  </Card>
+</CardGroup>
+
+## Tech stack
+
+| Technology | Purpose |
+|---|---|
+| React 19 | UI framework |
+| Vite 7 | Build tool and dev server |
+| React Router v7 | Client-side routing |
+| react-hot-toast | Toast notifications |
+| jsPDF + jspdf-autotable | PDF report generation |
+| lucide-react | Icon library |
+| CSS Modules | Component-scoped styling |
+
+## Get started
+
+<Steps>
+  <Step title="Read the introduction">
+    Learn about the project architecture and how the frontend connects to the backend API.
+
+    [Read introduction →](/introduction)
+  </Step>
+  <Step title="Run the quickstart">
+    Clone the repository, install dependencies, and start the development server.
+
+    [Go to quickstart →](/quickstart)
+  </Step>
+  <Step title="Explore the features">
+    Understand the product catalog, authentication flow, and entrepreneur dashboard in depth.
+
+    [Explore features →](/features/product-catalog)
+  </Step>
+</Steps>

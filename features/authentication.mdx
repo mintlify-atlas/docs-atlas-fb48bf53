@@ -1,0 +1,198 @@
+---
+title: "Authentication"
+description: "Login, registration, password recovery, token storage, and the ProtectedRoute component that guards private pages."
+---
+
+Sena Shopping uses JWT-based authentication. The `authService.js` module handles both login and registration HTTP calls, and the `ProtectedRoute` component enforces access control at the route level.
+
+## Routes
+
+| Route | Component | Description |
+|---|---|---
+| `/auth` | `Auth` | Combined login and registration page
+| `/forgot-password` | `ForgotPassword` | Sends a password-reset email
+| `/reset-password` | `ResetPassword` | Consumes the reset token from the email link
+
+All three routes render **outside** the main `Layout` wrapper, so they have no header or footer.
+
+## Login
+
+The login form posts to:
+
+```http
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{ "email": "user@example.com", "password": "secret" }
+```
+
+<Steps>
+  <Step title="Submit the form">
+    The user fills in their email and password on the **Iniciar sesión** tab of `/auth` and clicks **Iniciar sesión**.
+  </Step>
+  <Step title="API call via authService">
+    `loginUser(email, password)` in `authService.js` sends the `POST /api/auth/login` request. If the server returns a non-2xx status, the function throws an `Error` whose message comes from `data.message`.
+  </Step>
+  <Step title="Token and user stored">
+    On success the response payload contains `token` and `user`. Both are persisted to `localStorage`:
+
+    ```js
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    ```
+  </Step>
+  <Step title="Redirect">
+    If the user arrived from a contact prompt (`location.state?.fromContact`), they are sent back to the previous page with `navigate(-1)`. Otherwise they are redirected to `/`.
+  </Step>
+</Steps>
+
+<Warning>
+A debounce ref (`isSubmittingLogin`) prevents duplicate submissions if the user clicks the button multiple times before the response arrives.
+</Warning>
+
+## Registration
+
+The registration form posts to:
+
+```http
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "full_name": "María González",
+  "email": "maria@example.com",
+  "password": "secret123",
+  "role": "usuario",
+  "phone": "+573001234567"
+}
+```
+
+### Registration fields
+
+<ParamField body="full_name" type="string" required>
+  The user's full name. Maps to the `fullName` input field in the form.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Email address used for login.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Account password. A show/hide toggle is available on the input.
+</ParamField>
+
+<ParamField body="role" type="string" required>
+  Either `"usuario"` (regular buyer) or `"emprendedor"` (entrepreneur who can publish products).
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Colombian mobile number prefixed with `+57`. Only shown in the form when `role === "emprendedor"`. Digits entered in the input are stripped of non-numeric characters and combined with the `+57` prefix before being sent: `+57${phone}`.
+</ParamField>
+
+On success the API returns a message that is displayed as a toast notification, and the page automatically switches back to the login tab so the user can sign in immediately.
+
+## Token storage
+
+| Key | Value | Description |
+|---|---|---
+| `token` | JWT string | Sent as `Authorization: Bearer <token>` on authenticated requests
+| `user` | JSON string | Serialised user object with at minimum `id`, `full_name`, and `role`
+
+Both keys live in `localStorage` and persist across page refreshes until the user logs out or the session is invalidated by a 401 response.
+
+## ProtectedRoute
+
+`ProtectedRoute` is a wrapper component used in `App.jsx` to guard private routes. It accepts an optional `requiredRole` prop.
+
+```jsx
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (!token) return <Navigate to="/auth" replace />;
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+```
+
+**Behaviour at a glance:**
+
+- If `token` is absent from `localStorage`, the user is redirected to `/auth`.
+- If `requiredRole` is set and `user.role` does not match, the user is redirected to `/` (home).
+- If both checks pass, the wrapped children are rendered.
+
+Admin routes in `App.jsx` use `<ProtectedRoute requiredRole="administrador">`. Entrepreneur and user routes use `<ProtectedRoute>` without a role restriction, relying on the token check alone.
+
+## Global 401 interceptor
+
+`App.jsx` patches `window.fetch` on mount to intercept every response from `localhost:3000`. When a `401` status is received, the interceptor removes the session from `localStorage` and performs a hard redirect to `/auth`:
+
+```js
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+
+  if (response.status === 401) {
+    const url = args[0];
+    if (typeof url === "string" && url.includes("localhost:3000")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/auth";
+    }
+  }
+
+  return response;
+};
+```
+
+This means an expired or revoked JWT triggers an automatic logout without any additional handling in individual components.
+
+## Forgot password
+
+The `/forgot-password` route accepts an email address and calls:
+
+```http
+POST http://localhost:3000/api/auth/forgot-password
+Content-Type: application/json
+
+{ "email": "user@example.com" }
+```
+
+On a successful response the component displays a confirmation message telling the user to check their inbox. The email field is cleared.
+
+## Reset password
+
+The reset link delivered by email points to `/reset-password?token=<reset_token>`. The `ResetPassword` component reads the token from `useSearchParams`. If no token is present in the URL, the page renders an "invalid link" state and offers a link back to `/auth`.
+
+When a valid token is present, the user sets a new password by submitting:
+
+```http
+POST http://localhost:3000/api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "<reset_token>",
+  "newPassword": "newSecret123",
+  "confirmPassword": "newSecret123"
+}
+```
+
+The password input requires a minimum of 8 characters, one uppercase letter, and one number (enforced by the placeholder hint). On success the component shows a confirmation message and redirects to `/auth` after 2.5 seconds.
+
+## Logout
+
+The Header component's logout handler removes both `localStorage` keys and navigates to `/`:
+
+```js
+const handleLogout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  setUser(null);
+  navigate("/");
+};
+```
+
+This is available from the user avatar dropdown in the header for all authenticated roles.

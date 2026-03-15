@@ -1,0 +1,258 @@
+---
+title: "API integration"
+description: "How Sena Shopping communicates with its REST backend — base URL, authentication, endpoint reference, and error handling."
+---
+
+Sena Shopping communicates with a Node.js/Express backend over a local REST API. All requests go through the browser's native `fetch` API; there is no third-party HTTP client.
+
+## Base URL
+
+```text
+http://localhost:3000/api
+```
+
+<Note>
+  This base URL is hard-coded for local development. When deploying to a different environment, update the `API_URL` constant in `src/services/authService.js` and any inline `fetch` calls in page components.
+</Note>
+
+## Authentication
+
+After a successful login the backend returns a JWT token. The client stores it in `localStorage` under the key `token`, alongside the serialised user object under the key `user`.
+
+Protected API requests include the token in the HTTP `Authorization` header:
+
+```js
+headers: {
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${localStorage.getItem("token")}`
+}
+```
+
+## Global 401 interceptor
+
+Instead of wrapping every fetch call with token-expiry handling, `App.jsx` patches `window.fetch` once on mount. Any response with status `401` from `localhost:3000` automatically clears the stored credentials and redirects to `/auth`.
+
+```jsx
+// src/App.jsx
+useEffect(() => {
+  const originalFetch = window.fetch;
+
+  window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+
+    if (response.status === 401) {
+      const url = args[0];
+      if (typeof url === "string" && url.includes("localhost:3000")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/auth";
+      }
+    }
+
+    return response;
+  };
+
+  return () => {
+    window.fetch = originalFetch;  // restore on unmount
+  };
+}, []);
+```
+
+<Info>
+  The interceptor checks that the request URL contains `localhost:3000` before acting. This prevents third-party fetch calls (e.g., to Unsplash for images) from triggering a forced logout.
+</Info>
+
+## Endpoint reference
+
+### Auth
+
+| Method | Endpoint | Description | Auth required |
+|---|---|---|---|
+| `POST` | `/api/auth/login` | Authenticate a user, returns JWT | No |
+| `POST` | `/api/auth/register` | Create a new account, returns JWT | No |
+
+### Products
+
+| Method | Endpoint | Description | Auth required |
+|---|---|---|---|
+| `GET` | `/api/products` | List all products | No |
+| `GET` | `/api/products/:id` | Get a single product with full detail | No |
+| `GET` | `/api/products/suggestions?q=` | Autocomplete suggestions by name | No |
+
+### Entrepreneur
+
+| Method | Endpoint | Description | Auth required |
+|---|---|---|---|
+| `GET` | `/api/entrepreneurs/mis-productos` | Products belonging to the authenticated entrepreneur | Yes |
+| `POST` | `/api/entrepreneurs` | Create a new product listing | Yes |
+| `PUT` | `/api/entrepreneurs/:id` | Update an existing product | Yes |
+| `DELETE` | `/api/entrepreneurs/:id` | Delete a product | Yes |
+
+### Admin
+
+| Method | Endpoint | Description | Auth required | Role required |
+|---|---|---|---|---|
+| `GET` | `/api/admin/stats` | Platform-wide statistics | Yes | `administrador` |
+| `GET` | `/api/admin/usuarios` | List all registered users | Yes | `administrador` |
+| `GET` | `/api/admin/productos` | List all products across all entrepreneurs | Yes | `administrador` |
+
+## authService.js
+
+The `src/services/authService.js` module encapsulates the two unauthenticated endpoints that do not require a token.
+
+```js
+// src/services/authService.js
+const API_URL = "http://localhost:3000/api/auth";
+
+export const loginUser = async (email, password) => {
+  const response = await fetch(`${API_URL}/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const registerUser = async (full_name, email, password, role, phone) => {
+  const response = await fetch(`${API_URL}/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ full_name, email, password, role, phone }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+```
+
+### POST /api/auth/login
+
+<ParamField body="email" type="string" required>
+  The registered email address of the user.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account password in plain text. The backend is responsible for hashing comparison.
+</ParamField>
+
+### POST /api/auth/register
+
+<ParamField body="full_name" type="string" required>
+  Full name of the new user, stored as `full_name` in the database.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Email address — must be unique across all accounts.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Desired account password. The backend handles hashing before storage.
+</ParamField>
+
+<ParamField body="role" type="string" required>
+  Account type. Accepted values: `usuario`, `emprendedor`, `administrador`.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Optional contact phone number for the account.
+</ParamField>
+
+## Error handling
+
+Both service functions follow the same error pattern: if `response.ok` is `false` (i.e., the HTTP status is 4xx or 5xx), the parsed `data.message` field from the response body is thrown as a JavaScript `Error`.
+
+```js
+const data = await response.json();
+
+if (!response.ok) {
+  throw new Error(data.message);
+}
+```
+
+Callers catch this error and typically display it using react-hot-toast:
+
+```js
+try {
+  const data = await loginUser(email, password);
+  // store token, redirect…
+} catch (err) {
+  toast.error(err.message);
+}
+```
+
+## Mock data
+
+Two JSON files in `src/mocks/` provide static data when developing against the frontend without a running backend.
+
+<Tabs>
+  <Tab title="productsMock.json">
+    A flat array of 12 product objects, each with `id`, `name`, `price`, `image`, `entrepreneur`, and `category`. Used to populate the products listing page during development.
+
+    ```json
+    [
+      {
+        "id": "1",
+        "name": "Bolso Artesanal de Cuero",
+        "price": 180000,
+        "image": "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=500&q=80",
+        "entrepreneur": "María González",
+        "category": "Cuero"
+      },
+      {
+        "id": "2",
+        "name": "Vestido de seda",
+        "price": 85000,
+        "image": "https://images.unsplash.com/photo-1617019114583-affb34d1b3cd?q=80&w=687",
+        "entrepreneur": "Carlos Rodríguez",
+        "category": "Moda"
+      }
+      // … 10 more entries
+    ]
+    ```
+  </Tab>
+  <Tab title="productDetailMock.json">
+    A map from product `id` (string key) to a full product detail object. Each entry adds `images` (array), `description`, and `specifications` (array of `{ label, value }` pairs) on top of the list fields.
+
+    ```json
+    {
+      "1": {
+        "id": "1",
+        "name": "Bolso Artesanal de Cuero",
+        "price": 180000,
+        "category": "Cuero",
+        "images": [
+          "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&q=80"
+        ],
+        "description": "Bolso artesanal elaborado en cuero genuino, hecho a mano por artesanos colombianos.",
+        "entrepreneur": "María González",
+        "specifications": [
+          { "label": "Material", "value": "Cuero genuino" },
+          { "label": "Color", "value": "Marrón" },
+          { "label": "Origen", "value": "Hecho a mano en Colombia" }
+        ]
+      }
+      // … 11 more entries
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  Products are priced in Colombian pesos (COP). The values in the mock data (e.g., `180000`) represent COP amounts with no decimal component — format them with a locale-aware number formatter (`toLocaleString('es-CO')`) before display.
+</Tip>

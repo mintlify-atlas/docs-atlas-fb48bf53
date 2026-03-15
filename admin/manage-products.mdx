@@ -1,0 +1,120 @@
+---
+title: "Managing products"
+description: "List, filter, view, and permanently delete any product on the SENAshopping platform from the admin panel."
+---
+
+The **Gestionar Productos** page at `/admin/productos` gives administrators a full view of every product on the platform, with tools to filter by category and remove listings that violate platform policies.
+
+<Warning>
+  This page is protected by `ProtectedRoute` with `requiredRole="administrador"`. Accessing `/admin/productos` without the correct role redirects to `/`.
+</Warning>
+
+## Loading all products
+
+On mount, the page fetches every product from the admin endpoint:
+
+```javascript
+// src/pages/Admin/GestionarProductos.jsx
+useEffect(() => {
+  fetch("http://localhost:3000/api/admin/productos", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => res.json())
+    .then(setProducts)
+    .catch(() => setProducts([]))
+    .finally(() => setLoading(false));
+}, []);
+```
+
+While the request is in flight, the page renders a skeleton UI via `GestionarProductosSkeleton`. The total product count appears in the top bar once data is loaded.
+
+## Product fields
+
+Each product object returned by the API contains the following fields used in the table:
+
+| Field | Description |
+|---|---|
+| `id` | Unique product identifier |
+| `name` | Product name |
+| `image_url` | Cloudinary image URL shown as a thumbnail |
+| `entrepreneur` | Name of the entrepreneur who listed the product |
+| `category` | Product category |
+| `price` | Price in Colombian pesos (COP) |
+
+## Filtering by category
+
+The top bar contains a `<select>` dropdown that filters the product table by category. The available options are derived dynamically from the loaded product list:
+
+```javascript
+// src/pages/Admin/GestionarProductos.jsx
+const categorias = [...new Set(products.map((p) => p.category))];
+
+const filteredProducts = products.filter((p) =>
+  filtroCategoria ? p.category === filtroCategoria : true
+);
+```
+
+Selecting **Todas las categorías** (the default empty value) shows all products. Selecting any category name limits the table to products in that category. The product count in the top bar updates to reflect the filtered results.
+
+<Tip>
+  The category list is built from the actual products on the platform, so it always reflects the current state of the catalogue without any hardcoded values.
+</Tip>
+
+## Product table columns
+
+The table renders the following columns for each product:
+
+| Column | Content |
+|---|---|
+| **Producto** | Thumbnail image + product name |
+| **Emprendedor** | Name of the entrepreneur who owns the listing |
+| **Categoría** | Category badge |
+| **Precio** | Price formatted as Colombian pesos (e.g. `$25.000`) |
+| **Acciones** | **Ver** and **Eliminar** buttons |
+
+The **Ver** button opens the product's public page at `/productos/{id}` in a new tab so the administrator can review the full listing before making a decision.
+
+## Deleting a product
+
+Deleting a product is a permanent action and requires confirmation through a modal dialog.
+
+<Steps>
+  <Step title="Click Eliminar">
+    Click the **Eliminar** button on the product row. This sets `confirmDelete` to the product's ID and opens the confirmation modal.
+  </Step>
+  <Step title="Confirm in the modal">
+    The modal displays the message "¿Eliminar producto? Esta acción no se puede deshacer." Click **Sí, eliminar** to proceed or **Cancelar** to dismiss.
+  </Step>
+  <Step title="Product is removed">
+    Confirming calls `handleDelete`, which sends a `DELETE` request to the backend:
+
+    ```javascript
+    // src/pages/Admin/GestionarProductos.jsx
+    const handleDelete = async (id) => {
+      const res = await fetch(
+        `http://localhost:3000/api/admin/productos/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (res.ok) {
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+        setMensaje({ tipo: "exito", texto: "Producto eliminado correctamente" });
+        setTimeout(() => setMensaje(null), 3000);
+      }
+    };
+    ```
+
+    On success, the product is removed from the local state immediately and a success notification appears for 3 seconds.
+  </Step>
+</Steps>
+
+<Warning>
+  Product deletion is irreversible. There is no soft-delete or recycle bin — once confirmed, the product is permanently removed from the platform.
+</Warning>
+
+## Notifications
+
+A success or error message appears at the top of the product list after each action and auto-dismisses after 3 seconds. Clicking outside the confirmation modal also dismisses it without performing any action.

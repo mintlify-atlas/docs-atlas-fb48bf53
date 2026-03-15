@@ -1,0 +1,145 @@
+---
+title: "Entrepreneur panel"
+description: "Routes and workflows available to entrepreneurs for publishing, editing, and deleting their products."
+---
+
+Users who register with `role: "emprendedor"` gain access to a set of protected routes for managing their product listings. All three entrepreneur routes require a valid JWT token in `localStorage` and are wrapped with `ProtectedRoute` in `App.jsx`.
+
+## Routes
+
+| Route | Component | Purpose |
+|---|---|---
+| `/mis-productos` | `MisProductos` | Grid view of all products the entrepreneur has published
+| `/emprendedor/crear-producto` | `CrearProducto` | Form to publish a new product
+| `/emprendedor/editar-producto/:id` | `EditarProducto` | Pre-populated form to update an existing product
+
+The header's user dropdown exposes **Mis productos** and **Crear producto** links when the logged-in user's `role` is `"emprendedor"`.
+
+## Mis productos
+
+`MisProductos` fetches only the products belonging to the current entrepreneur:
+
+```http
+GET http://localhost:3000/api/entrepreneurs/mis-productos
+Authorization: Bearer <token>
+```
+
+While loading, the page renders a `MisProductosSkeleton` placeholder. Once loaded, products appear in a card grid. Each card displays:
+
+- Product image (links to `/productos/:id`)
+- A **status badge** overlaid on the image
+- Category label
+- Product name
+- Price formatted in Colombian pesos
+- **Editar** and **Eliminar** action buttons
+
+### Product status values
+
+| Value | Meaning |
+|---|---
+| `activo` | Visible to all users in the public catalog
+| `pendiente` | Awaiting admin review before becoming visible
+| `inactivo` | Not shown in the public catalog
+
+The status badge is styled with a CSS class matching the status string (`styles.activo`, `styles.pendiente`, `styles.inactivo`).
+
+## Creating a product
+
+The `CrearProducto` form submits a `multipart/form-data` request:
+
+```http
+POST http://localhost:3000/api/products
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+### Form fields
+
+<ParamField body="name" type="string" required>
+  Product name. Example: `Bolso artesanal de cuero`.
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Freeform description of the product: materials, technique, intended use.
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Reference price in Colombian pesos (COP). Must be ≥ 0.
+</ParamField>
+
+<ParamField body="category_id" type="string" required>
+  ID of the selected category. The dropdown is populated dynamically from:
+
+  ```http
+  GET http://localhost:3000/api/categories
+  ```
+</ParamField>
+
+<ParamField body="image" type="file" required>
+  Product image file. Accepted formats: any image type (`image/*`). Maximum size: 5 MB. JPG and PNG are recommended.
+</ParamField>
+
+<ParamField body="specifications" type="string">
+  Optional JSON string of `{label, value}` pairs. Example:
+
+  ```json
+  [{"label": "Material", "value": "Cuero genuino"}, {"label": "Color", "value": "Marrón"}]
+  ```
+
+  Only pairs where both `label` and `value` are non-empty are included. Entrepreneurs can add rows with the **+ Agregar especificación** button and remove them with the **✕** button on each row.
+</ParamField>
+
+<Steps>
+  <Step title="Upload an image">
+    Click the image area to open the file picker. A live preview renders once a file is selected. The form cannot be submitted without an image.
+  </Step>
+  <Step title="Fill in the product details">
+    Enter the name, description, price in COP, and select a category from the dropdown.
+  </Step>
+  <Step title="Add specifications (optional)">
+    Add one or more label/value pairs to describe attributes like material, dimensions, or available sizes.
+  </Step>
+  <Step title="Submit">
+    Click **Publicar producto →**. On success, all fields reset and a confirmation message appears. The product is created with `status: "pendiente"` until reviewed by an administrator.
+  </Step>
+</Steps>
+
+## Editing a product
+
+When the entrepreneur clicks **Editar** in `/mis-productos`, they are taken to `/emprendedor/editar-producto/:id`. The `EditarProducto` component pre-populates the form by fetching the current product:
+
+```http
+GET http://localhost:3000/api/products/:id
+```
+
+The form fields are identical to the create form. The price is loaded as an integer (no decimals). The current image is shown as the preview; uploading a new file replaces it.
+
+On submit, the component sends a `PUT` request:
+
+```http
+PUT http://localhost:3000/api/entrepreneurs/:id
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+The `image` field is only appended to the `FormData` if a new file was selected; otherwise the server keeps the existing image. On success the user is redirected to `/mis-productos` after 1.5 seconds.
+
+## Deleting a product
+
+Clicking **Eliminar** in the product card does not immediately delete the product. Instead it sets a `confirmDelete` state to the product's `id`, which renders a modal overlay:
+
+> **¿Eliminar producto?**
+> Esta acción no se puede deshacer.
+
+The modal has two buttons: **Cancelar** (closes the modal without action) and **Sí, eliminar** (calls the delete endpoint).
+
+```http
+DELETE http://localhost:3000/api/entrepreneurs/:id
+Authorization: Bearer <token>
+```
+
+On a successful `200` response the product is removed from the local `products` state array, so the card disappears immediately without a page reload.
+
+<Warning>
+Deletion is permanent. The confirmation modal is the only safeguard — there is no undo or soft-delete.
+</Warning>

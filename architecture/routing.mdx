@@ -1,0 +1,244 @@
+---
+title: "Routing"
+description: "How React Router v7 is configured in Sena Shopping, including the Layout wrapper, ProtectedRoute guard, and ScrollToTop behavior."
+---
+
+Sena Shopping uses **React Router v7** (`react-router-dom@^7.13.0`) with a `BrowserRouter` provider mounted at the application root.
+
+```jsx
+// src/main.jsx
+import { BrowserRouter } from 'react-router-dom'
+import App from './App.jsx'
+
+createRoot(document.getElementById('root')).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+)
+```
+
+## Route table
+
+| Path | Component | Inside Layout | Auth required | Role required |
+|---|---|---|---|---|
+| `/` | `Index` | Yes | No | — |
+| `/productos` | `Products` | Yes | No | — |
+| `/productos/:id` | `ProductDetail` | Yes | No | — |
+| `/emprendedores` | `Emprendedores` | Yes | No | — |
+| `/emprendedor/crear-producto` | `CrearProducto` | Yes | Yes | — |
+| `/mis-productos` | `MisProductos` | Yes | Yes | — |
+| `/emprendedor/editar-producto/:id` | `EditarProducto` | Yes | Yes | — |
+| `/perfil` | `Perfil` | Yes | Yes | — |
+| `/favoritos` | `Favorites` | Yes | Yes | — |
+| `/admin` | `Dashboard` | Yes | Yes | `administrador` |
+| `/admin/productos` | `GestionarProductos` | Yes | Yes | `administrador` |
+| `/admin/usuarios` | `GestionarUsuarios` | Yes | Yes | `administrador` |
+| `/terminos` | `Terminos` | Yes | No | — |
+| `/privacidad` | `Privacidad` | Yes | No | — |
+| `/ayuda` | `FAQ` | Yes | No | — |
+| `/auth` | `Auth` | No | No | — |
+| `/reset-password` | `ResetPassword` | No | No | — |
+| `/forgot-password` | `ForgotPassword` | No | No | — |
+
+## Route structure in App.jsx
+
+All routes are declared inside a single `<Routes>` tree. The outer `<Route element={<Layout />}>` acts as a parent shell — any child route renders into the `<Outlet />` inside `Layout`.
+
+```jsx
+// src/App.jsx (route tree)
+<Routes>
+  <Route element={<Layout />}>
+    <Route path="/" element={<Index />} />
+    <Route path="/productos" element={<Products />} />
+    <Route path="/productos/:id" element={<ProductDetail />} />
+    <Route path="/emprendedores" element={<Emprendedores />} />
+
+    <Route
+      path="/emprendedor/crear-producto"
+      element={
+        <ProtectedRoute>
+          <CrearProducto />
+        </ProtectedRoute>
+      }
+    />
+
+    <Route
+      path="/admin"
+      element={
+        <ProtectedRoute requiredRole="administrador">
+          <Dashboard />
+        </ProtectedRoute>
+      }
+    />
+
+    {/* … more routes … */}
+  </Route>
+
+  {/* Auth routes — outside Layout, no Header/Footer */}
+  <Route path="/auth" element={<Auth />} />
+  <Route path="/reset-password" element={<ResetPassword />} />
+  <Route path="/forgot-password" element={<ForgotPassword />} />
+</Routes>
+```
+
+## Layout component
+
+`Layout` is a thin wrapper that sandwiches every main-app route between the `Header` and `Footer`, using React Router's `<Outlet />` to render the matched child route.
+
+```jsx
+// src/components/Layout/Layout.jsx
+import Header from "../Header/Header";
+import Footer from "../Footer/Footer";
+import { Outlet } from "react-router-dom";
+
+function Layout() {
+  return (
+    <>
+      <Header />
+      <Outlet />
+      <Footer />
+    </>
+  );
+}
+```
+
+The three auth-flow pages (`/auth`, `/reset-password`, `/forgot-password`) are declared as **siblings** of the Layout route, not children of it. They render without any Header or Footer, giving the auth screens a full-bleed, distraction-free layout.
+
+## ProtectedRoute
+
+`ProtectedRoute` is a wrapper component that guards access to authenticated and role-restricted routes.
+
+```jsx
+// src/components/ProtectedRoute/ProtectedRoute.jsx
+import { Navigate } from "react-router-dom";
+
+const ProtectedRoute = ({ children, requiredRole }) => {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  if (!token) return <Navigate to="/auth" replace />;
+
+  if (requiredRole && user?.role !== requiredRole) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+```
+
+<Steps>
+  <Step title="Check for a token">
+    Reads `token` from `localStorage`. If no token exists, the visitor is not authenticated and is immediately redirected to `/auth` with `replace` (no back-navigation entry is added).
+  </Step>
+  <Step title="Check the role (optional)">
+    If the route was declared with a `requiredRole` prop (e.g., `requiredRole="administrador"`), the stored `user.role` is compared against it. A mismatch redirects to `/` — the authenticated user lands on the home page rather than seeing an error.
+  </Step>
+  <Step title="Render children">
+    Both checks pass: the component simply returns `children`, rendering the protected page component as normal.
+  </Step>
+</Steps>
+
+### Usage
+
+<Tabs>
+  <Tab title="Auth only">
+    Wrap any page component that requires a logged-in user but no specific role:
+
+    ```jsx
+    <Route
+      path="/perfil"
+      element={
+        <ProtectedRoute>
+          <Perfil />
+        </ProtectedRoute>
+      }
+    />
+    ```
+  </Tab>
+  <Tab title="Role restricted">
+    Pass `requiredRole` to restrict access to a specific user role:
+
+    ```jsx
+    <Route
+      path="/admin/usuarios"
+      element={
+        <ProtectedRoute requiredRole="administrador">
+          <GestionarUsuarios />
+        </ProtectedRoute>
+      }
+    />
+    ```
+  </Tab>
+</Tabs>
+
+### Roles
+
+The application recognises three user roles, each granting access to different routes and navigation menu items:
+
+| Role | Accessible protected routes |
+|---|---|
+| `usuario` | `/perfil`, `/favoritos` |
+| `emprendedor` | `/perfil`, `/mis-productos`, `/emprendedor/crear-producto`, `/emprendedor/editar-producto/:id` |
+| `administrador` | `/admin`, `/admin/productos`, `/admin/usuarios` |
+
+## SplashScreen
+
+On first load, `App` shows a full-screen `SplashScreen` overlay for 2.5 seconds before displaying any route content. This is handled with a simple `useState` + `useEffect` timer — it does not block routing, so deep-link navigation still works correctly once the timer clears.
+
+```jsx
+// src/App.jsx
+const [showSplash, setShowSplash] = useState(true);
+
+useEffect(() => {
+  const timer = setTimeout(() => setShowSplash(false), 2500);
+  return () => clearTimeout(timer);
+}, []);
+
+// In JSX:
+{showSplash && <SplashScreen />}
+```
+
+## ScrollToTop
+
+`ScrollToTop` is a renderless utility component placed at the top of the `App` JSX tree. It listens to React Router's `useLocation` hook and scrolls the window to the top coordinates whenever the `pathname` changes.
+
+```jsx
+// src/components/ScrollToTop/ScrollToTop.jsx
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+
+export default function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+```
+
+Because it returns `null`, it renders nothing in the DOM. Placing it outside the `<Routes>` tree means it fires for every navigation event, including the auth routes that live outside `Layout`.
+
+<Tip>
+  `ScrollToTop` must be a descendant of `BrowserRouter` (it is, since `BrowserRouter` wraps `App` in `main.jsx`) to call `useLocation` without error.
+</Tip>
+
+## Toast notifications
+
+The app uses **react-hot-toast** for in-app feedback. The `<Toaster />` component is mounted once at the root of `App`, outside `<Routes>`, so toast messages survive route transitions.
+
+```jsx
+<Toaster
+  position="top-right"
+  toastOptions={{
+    duration: 4000,
+    style: {
+      borderRadius: "10px",
+      fontFamily: "inherit",
+    },
+  }}
+/>
+```
+
+Any component in the tree can trigger a toast by calling `toast.success("message")` or `toast.error("message")` from `react-hot-toast`.

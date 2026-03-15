@@ -1,0 +1,258 @@
+---
+title: "PDF reports"
+description: "Generate and download a full platform report as a PDF from the admin dashboard, including statistics, category breakdowns, and recent user registrations."
+---
+
+The admin dashboard includes a one-click PDF report generator powered by [jsPDF](https://github.com/parallax/jsPDF) and [jspdf-autotable](https://github.com/simonbengtsson/jsPDF-AutoTable). The report captures a point-in-time snapshot of platform statistics and is saved directly to the administrator's device.
+
+## Generating a report
+
+<Steps>
+  <Step title="Open the admin dashboard">
+    Navigate to `/admin`. The dashboard must have finished loading statistics before the report can be generated. If the stats fetch failed, the page shows an error message instead of the dashboard.
+  </Step>
+  <Step title="Click Descargar reporte PDF">
+    Click the **Descargar reporte PDF** button in the dashboard hero section. The button is disabled while the PDF is being built, and a spinner replaces the label to indicate progress.
+
+    ```jsx
+    // src/pages/Admin/Dashboard.jsx
+    <button
+      className={styles.btnReporte}
+      onClick={generarReporte}
+      disabled={loadingPDF}
+    >
+      {loadingPDF ? (
+        <span className={styles.spinner} />
+      ) : (
+        "📄 Descargar reporte PDF"
+      )}
+    </button>
+    ```
+  </Step>
+  <Step title="Save the file">
+    Once generated, the browser downloads the file automatically. The filename follows the pattern:
+
+    ```
+    reporte-senashopping-YYYY-MM-DD.pdf
+    ```
+
+    For example: `reporte-senashopping-2026-03-15.pdf`.
+  </Step>
+</Steps>
+
+## PDF structure
+
+The generated document is a single-page A4 PDF with five distinct sections.
+
+### Header
+
+The header occupies the top 45 pt of the page. It attempts to load the SENAshopping logo from Cloudinary and embed it as a base64 PNG:
+
+```javascript
+// src/pages/Admin/Dashboard.jsx
+const getBase64FromUrl = async (url) => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+};
+
+// Inside generarReporte:
+try {
+  const logoBase64 = await getBase64FromUrl(
+    "https://res.cloudinary.com/dehcso9iq/image/upload/v1772043417/logo_hcvxwf.png"
+  );
+  doc.addImage(logoBase64, "PNG", 14, 5, 30, 30);
+} catch {
+  // Falls back to text if the logo cannot be fetched
+  doc.setTextColor(46, 204, 113);
+  doc.setFontSize(22);
+  doc.setFont("helvetica", "bold");
+  doc.text("SENAshopping", 14, 22);
+}
+```
+
+Next to the logo, the header shows:
+- `"Plataforma de emprendedores del SENA"` as a subtitle
+- `"Reporte generado el {fecha}"` in a smaller font
+
+<Note>
+  If the Cloudinary request fails (for example due to a network error), the header falls back to rendering the text "SENAshopping" in green instead of the logo image.
+</Note>
+
+### Report title and date
+
+Centred below the header, the report prints:
+- `"Reporte General del Sistema"` as the main title (18 pt bold)
+- `"Fecha de generación: {fecha}"` formatted using `es-CO` locale (e.g. `15 de marzo de 2026`)
+- A green horizontal rule separating the title from the content
+
+### General statistics
+
+Five stat cards are laid out in a 3-column grid, each showing a large green number and a grey label:
+
+| Label | Source field |
+|---|---|
+| Usuarios activos | `stats.totalUsuarios` |
+| Emprendedores activos | `stats.totalEmprendedores` |
+| Pendientes de aprobación | `stats.pendientes` |
+| Productos publicados | `stats.totalProductos` |
+| Favoritos guardados | `stats.totalFavoritos` |
+
+Each card has a light grey fill and a rounded border to visually separate the values.
+
+### Products by category table
+
+A table rendered with `jspdf-autotable` lists how many products exist in each category:
+
+```javascript
+// src/pages/Admin/Dashboard.jsx
+autoTable(doc, {
+  startY: 158,
+  head: [["Categoría", "Total de productos"]],
+  body: stats.productosPorCategoria.map((cat) => [
+    cat.categoria,
+    cat.total,
+  ]),
+  headStyles: {
+    fillColor: [46, 204, 113], // green header
+    textColor: 255,
+    fontStyle: "bold",
+    fontSize: 10,
+  },
+  alternateRowStyles: {
+    fillColor: [245, 255, 250], // light mint alternating rows
+  },
+  columnStyles: {
+    1: { cellWidth: 50, halign: "center" },
+  },
+  margin: { left: 14, right: 14 },
+});
+```
+
+| Column | Content |
+|---|---|
+| Categoría | Category name |
+| Total de productos | Product count, centre-aligned |
+
+### Latest registered users table
+
+Immediately below the category table, a second `autoTable` call renders the most recent user registrations. The table starts directly after `doc.lastAutoTable.finalY + 12` to avoid overlapping content:
+
+```javascript
+// src/pages/Admin/Dashboard.jsx
+const afterCategorias = doc.lastAutoTable.finalY + 12;
+
+autoTable(doc, {
+  startY: afterCategorias + 5,
+  head: [["Nombre", "Email", "Rol", "Estado"]],
+  body: stats.ultimosUsuarios.map((user) => [
+    user.full_name,
+    user.email,
+    user.role,
+    user.status,
+  ]),
+  headStyles: {
+    fillColor: [46, 204, 113],
+    textColor: 255,
+    fontStyle: "bold",
+    fontSize: 10,
+  },
+  alternateRowStyles: {
+    fillColor: [245, 255, 250],
+  },
+  margin: { left: 14, right: 14 },
+});
+```
+
+| Column | Content |
+|---|---|
+| Nombre | `user.full_name` |
+| Email | `user.email` |
+| Rol | `user.role` |
+| Estado | `user.status` |
+
+### Footer
+
+A solid green bar spans the full width of the page bottom. It contains the copyright line:
+
+```
+© {YYYY} SENAshopping — Reporte generado el {fecha}
+```
+
+The year is taken from `new Date().getFullYear()` at generation time.
+
+## Full generation function
+
+The complete `generarReporte` function from `Dashboard.jsx`:
+
+```javascript
+// src/pages/Admin/Dashboard.jsx
+const generarReporte = async () => {
+  setLoadingPDF(true);
+
+  try {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const fecha = new Date().toLocaleDateString("es-CO", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Header with logo
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageWidth, 45, "F");
+    try {
+      const logoBase64 = await getBase64FromUrl(
+        "https://res.cloudinary.com/dehcso9iq/image/upload/v1772043417/logo_hcvxwf.png"
+      );
+      doc.addImage(logoBase64, "PNG", 14, 5, 30, 30);
+    } catch {
+      doc.setTextColor(46, 204, 113);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("SENAshopping", 14, 22);
+    }
+
+    // Title
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("Reporte General del Sistema", pageWidth / 2, 60, {
+      align: "center",
+    });
+
+    // Stats grid, category table, users table ...
+    // (see Dashboard.jsx for the full implementation)
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFillColor(46, 204, 113);
+    doc.rect(0, pageHeight - 14, pageWidth, 14, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text(
+      `© ${new Date().getFullYear()} SENAshopping — Reporte generado el ${fecha}`,
+      pageWidth / 2,
+      pageHeight - 5,
+      { align: "center" }
+    );
+
+    doc.save(
+      `reporte-senashopping-${new Date().toISOString().split("T")[0]}.pdf`
+    );
+  } catch (error) {
+    console.error("Error generando PDF:", error);
+  } finally {
+    setLoadingPDF(false);
+  }
+};
+```
+
+<Tip>
+  `setLoadingPDF` is reset to `false` in the `finally` block, so the button always re-enables even if the PDF generation throws an unexpected error.
+</Tip>

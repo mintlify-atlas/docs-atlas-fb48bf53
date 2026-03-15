@@ -1,0 +1,114 @@
+---
+title: "Product catalog"
+description: "How the product catalog works, what fields are displayed, and how users navigate from the grid to a product detail page."
+---
+
+The product catalog is the primary browsing surface of Sena Shopping. It lives at `/productos` and renders every active product published by SENA entrepreneurs. On first load the page fetches all products from the API, then applies any active filters entirely on the client side.
+
+## Data fetching
+
+When the `Products` component mounts it issues a single `GET` request:
+
+```http
+GET http://localhost:3000/api/products
+```
+
+While the request is in flight the component renders a grid of **8** `ProductSkeleton` placeholder cards. Once the response resolves, the skeleton grid is replaced with the real product cards. If the fetch throws, the page renders an inline error message (`"Error al cargar los productos"`) instead of the grid.
+
+<Note>
+Filtering happens entirely on the already-fetched array. No additional API calls are made when the user changes a filter.
+</Note>
+
+## Product card fields
+
+Each item in the API response is rendered by the `ProductCard` component. The following fields are displayed on every card:
+
+| Field | Source field | Display
+|---|---|---
+| Product name | `name` | Card title
+| Price | `price` | Formatted in Colombian pesos (es-CO locale)
+| Category | `category` | Overlay badge on the product image
+| Image | `image_url` | Full-bleed card image
+| Entrepreneur name | `entrepreneur` | Subtext below the product name
+
+The card also exposes a **Contactar** button that opens a pre-filled WhatsApp chat using the entrepreneur's `entrepreneur_phone` field, and a heart icon to toggle the product in or out of the user's favorites.
+
+## Navigating to a product
+
+Clicking anywhere on a `ProductCard` navigates to:
+
+```
+/productos/:id
+```
+
+The detail page (`ProductDetail`) fetches the full product record and its reviews:
+
+```http
+GET http://localhost:3000/api/products/:id
+GET http://localhost:3000/api/reviews/:id
+```
+
+The detail page shows `name`, `price`, `category`, `image_url`, `description`, `entrepreneur`, and an optional `specifications` array rendered as a labelled list.
+
+## Filter bar
+
+Above the product grid the page renders a filter bar with four controls. All four filters are applied simultaneously to the same in-memory array.
+
+<CardGroup cols={2}>
+  <Card title="Category" icon="tag">
+    A `<select>` dropdown populated with the unique `category` values extracted from the fetched products array. Selecting a category keeps only products where `p.category === filtroCategoria`.
+  </Card>
+  <Card title="Sort order" icon="arrow-up-down">
+    A `<select>` with three options: `precio_asc` (lowest price first), `precio_desc` (highest price first), and `reciente` (sorted by `id` descending, newest first).
+  </Card>
+  <Card title="Minimum price" icon="circle-dollar-sign">
+    A number input (`min="0"`). Keeps products where `Number(p.price) >= Number(precioMin)`.
+  </Card>
+  <Card title="Maximum price" icon="circle-dollar-sign">
+    A number input (`min="0"`). Keeps products where `Number(p.price) <= Number(precioMax)`.
+  </Card>
+</CardGroup>
+
+### Filter application order
+
+Filters are applied in this sequence:
+
+1. Text search (`?q=` query param) narrows the base array first.
+2. Category filter is applied to the search-narrowed array.
+3. Minimum price filter is applied next.
+4. Maximum price filter is applied next.
+5. Sort order is applied last to the fully-filtered array.
+
+## Text search
+
+The catalog reads the `q` query parameter from the URL using React Router's `useSearchParams`:
+
+```jsx
+const [searchParams] = useSearchParams();
+const query = searchParams.get("q") || "";
+```
+
+When `q` is present, the component filters products where the query string (case-insensitive) appears in any of these four fields:
+
+- `name`
+- `description`
+- `category`
+- `entrepreneur`
+
+The page title updates to `Resultados para: "<query>"` when an active search query is present.
+
+<Tip>
+Search is initiated from the Header's search bar. Pressing Enter navigates to `/productos?q=<encoded query>`. The Header also calls `GET /api/products/suggestions?q=<query>` with a 300 ms debounce to show an autocomplete dropdown.
+</Tip>
+
+## Empty state
+
+When the filtered array is empty the grid is replaced with the message:
+
+> No se encontraron productos con los filtros seleccionados
+
+If any filter is currently active, a secondary **Limpiar filtros** button appears inside the empty state to let users reset without scrolling back to the filter bar.
+
+## Clearing filters
+
+The **✕ Limpiar** button appears in the filter bar whenever at least one filter has a non-empty value (`filtroCategoria || filtroOrden || precioMin || precioMax`). Clicking it resets all four filter states to empty strings, which shows the full unfiltered product list again. The `?q=` query param is controlled separately by the URL and is not cleared by this button.

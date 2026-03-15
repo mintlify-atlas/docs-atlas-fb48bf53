@@ -1,0 +1,102 @@
+---
+title: "Privacy policy"
+description: "How SENAshopping collects, stores, and uses your personal data, and what rights you have over it."
+---
+
+<Info>
+  Last updated: January 2026
+</Info>
+
+SENAshopping is committed to protecting your personal information. This policy explains what data we collect, how we use it, and the steps we take to keep it secure.
+
+## 1. Information we collect
+
+When you register on SENAshopping, we collect the following:
+
+| Field | Required | Purpose |
+|---|---|---|
+| Full name | Yes | Identify you on the platform |
+| Email address | Yes | Account access and transactional emails |
+| Password | Yes | Authentication (stored encrypted — see section 3) |
+| Phone number | No (required for entrepreneurs) | Allows users to contact you via WhatsApp |
+| Account type (role) | Yes | Determines which features are available to you |
+
+We do not collect payment information, location data, or browsing history.
+
+## 2. How we use your information
+
+Your information is used exclusively to:
+
+- Manage your account and authenticate your sessions.
+- Send account-related emails such as welcome messages, entrepreneur approval notifications, and password reset links.
+- Display your WhatsApp number to other users if you are a registered entrepreneur, so they can contact you about your products.
+
+We do not use your data for advertising, profiling, or any purpose beyond operating the platform.
+
+## 3. Password storage
+
+Your password is never stored in plain text. We use the **bcrypt** algorithm to hash and store your password. No member of the SENAshopping team can access or recover your original password.
+
+If you forget your password, use the reset flow at `/forgot-password` to set a new one.
+
+<Tip>
+  Use a unique password for SENAshopping. A strong password has at least 8 characters and includes at least one uppercase letter and one number.
+</Tip>
+
+## 4. Sharing information with third parties
+
+We do not sell, rent, or share your personal information with third parties.
+
+The only exception is the **phone number of entrepreneurs**, which is visible to logged-in users on product detail pages. This is necessary for users to contact entrepreneurs directly via WhatsApp to coordinate purchases. Entrepreneurs acknowledge and consent to this when registering with the entrepreneur role.
+
+## 5. Cookies and local storage
+
+SENAshopping does not use tracking cookies. However, we do use the browser's `localStorage` to maintain your active session:
+
+- A **JWT authentication token** is stored in `localStorage` after you log in. This token is used to authenticate your requests to the API.
+- Your basic profile data (name, email, role) is also cached in `localStorage` to avoid unnecessary API calls during your session.
+
+Both the token and cached profile data are removed from `localStorage` when you log out or deactivate your account. The session token also expires automatically.
+
+<Note>
+  JWT tokens stored in `localStorage` do not contain your password or other sensitive data beyond what is needed to identify your session.
+</Note>
+
+## 6. Your rights
+
+You have the following rights regarding your personal data:
+
+- **Update your information** — edit your name, email, and phone number at any time from your profile at `/perfil`.
+- **Delete your account** — use the **Desactivar mi cuenta** option in your profile. For entrepreneur accounts, this will also permanently delete all associated products.
+- **Contact us** — reach out to us at senashopping2025@gmail.com with any questions or requests related to your data.
+
+## 7. Information security
+
+We implement the following measures to protect your data:
+
+- **JWT-based authentication** — all authenticated API requests require a valid token. Expired tokens result in automatic logout.
+- **bcrypt password hashing** — passwords are never stored or transmitted in plain text.
+- **Server-side validation** — all API inputs are validated on the server to prevent common injection attacks.
+
+Despite these measures, no system is completely invulnerable. We recommend using a strong, unique password and logging out when using shared devices.
+
+## 8. Minors
+
+SENAshopping is not directed at children under 13 years of age. If you are a parent or guardian and believe your child has provided personal information on the platform, contact us at senashopping2025@gmail.com so we can remove it.
+
+## 9. Changes to this policy
+
+We may update this privacy policy from time to time. We will notify users of significant changes by publishing the updated policy on this page with a revised effective date. Continued use of the platform after changes are published constitutes acceptance of the updated policy.
+
+## 10. Contact
+
+If you have questions about this privacy policy or how your data is handled, write to us at **senashopping2025@gmail.com**.
+
+<CardGroup cols={2}>
+  <Card title="Terms of service" icon="file-contract" href="/support/terms">
+    Review the terms and conditions that govern the use of SENAshopping.
+  </Card>
+  <Card title="Frequently asked questions" icon="circle-question" href="/support/faq">
+    Find answers to common questions about accounts, products, and privacy.
+  </Card>
+</CardGroup>

@@ -1,0 +1,144 @@
+---
+title: "Frequently asked questions"
+description: "Answers to the most common questions about SENAshopping — account creation, product publishing, favorites, and more."
+---
+
+SENAshopping is an academic digital platform that gives visibility to products made by SENA entrepreneurs. It is not an online store — no payments are processed on the platform. Contact between users and entrepreneurs happens directly through WhatsApp.
+
+<Note>
+  Can't find the answer you're looking for? Write to us at **senashopping2025@gmail.com**.
+</Note>
+
+## Account and registration
+
+<AccordionGroup>
+  <Accordion title="How do I create an account?">
+    Go to `/auth` and click **Registrarse**. Fill in your full name, email, and password, then choose your account type:
+
+    - **Usuario** — browse products, save favorites, and contact entrepreneurs.
+    - **Emprendedor** — everything a usuario can do, plus the ability to publish and manage your own products.
+
+    You can also provide your phone number at registration. This is optional for usuarios but required if you later want to become an entrepreneur.
+  </Accordion>
+
+  <Accordion title="What is the difference between a user and an entrepreneur?">
+    | Feature | Usuario | Emprendedor |
+    |---|---|---|
+    | Browse products | Yes | Yes |
+    | Save favorites | Yes | Yes |
+    | Contact entrepreneurs via WhatsApp | Yes | Yes |
+    | Publish products | No | Yes |
+    | Edit and delete own products | No | Yes |
+    | Appear in the entrepreneurs directory | No | Yes |
+
+    Entrepreneur accounts require admin approval before publishing is enabled.
+  </Accordion>
+
+  <Accordion title="Can I be a user and an entrepreneur at the same time?">
+    You start as a **usuario** and can request the entrepreneur role at any time from your profile at `/perfil`. Before making the request, make sure you have added a WhatsApp phone number to your profile — this is required for the upgrade.
+
+    Once you submit the request, the administrator reviews it. You will receive a confirmation email when your account is approved and you can start publishing products.
+  </Accordion>
+
+  <Accordion title="How long does entrepreneur account approval take?">
+    Approval time depends on the platform administrator. It is typically processed promptly. You will receive an email notification as soon as your account is approved.
+  </Accordion>
+
+  <Accordion title="I forgot my password — what do I do?">
+    On the login page at `/auth`, click the **¿Olvidaste tu contraseña?** link. Enter your registered email address and you will receive a reset link.
+
+    <Warning>
+      The password reset link is valid for **1 hour**. After it expires, you will need to request a new one from `/forgot-password`.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="How do I deactivate my account?">
+    Go to your profile at `/perfil` and scroll to the **Desactivar mi cuenta** section. You will be asked to confirm before the action is applied.
+
+    <Warning>
+      If you are an entrepreneur, deactivating your account will also permanently delete all of your published products. This action cannot be undone by you, though you can reactivate your account by logging in again.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+## Products
+
+<AccordionGroup>
+  <Accordion title="How do I publish a product?">
+    Your account must first be registered and approved as an **emprendedor**. Once approved:
+
+    1. Sign in and navigate to `/emprendedor/crear-producto` or use the **Crear producto** option in the menu.
+    2. Fill in the product name, description, price, category, and upload an image.
+    3. Submit the form. Your product will be reviewed by an administrator before it becomes publicly visible.
+
+    <Tip>
+      Make sure your listing has accurate pricing and a clear description. Entrepreneurs are responsible for the truthfulness of their product information.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Why is my product showing as 'pendiente'?">
+    All new products require administrator approval before they appear publicly on the platform. The **pendiente** (pending) status means your product has been submitted and is awaiting review.
+
+    Once approved, the status changes and your product becomes visible to all users browsing `/productos`.
+  </Accordion>
+
+  <Accordion title="What does the 'inactivo' status mean for a product?">
+    A product marked as **inactivo** has been deactivated — either by you or by the administrator. It is no longer visible in the public product listings.
+
+    You can reactivate or edit an inactive product from your `/mis-productos` dashboard.
+  </Accordion>
+
+  <Accordion title="How do I edit or delete my products?">
+    Go to `/mis-productos` to see all the products associated with your entrepreneur account. From there you can:
+
+    - **Edit** a product to update its name, description, price, category, or image — navigates to `/emprendedor/editar-producto/:id`.
+    - **Delete** a product permanently.
+
+    Only the entrepreneur who owns a product can edit or delete it.
+  </Accordion>
+
+  <Accordion title="How do I search for products?">
+    You can find products in two ways:
+
+    - Use the **search bar in the header** to search by product name from any page on the site.
+    - Visit `/productos` to browse the full catalog with category and filter options.
+
+    You can also visit `/emprendedores` to browse the list of entrepreneurs and see all products from a specific seller.
+  </Accordion>
+</AccordionGroup>
+
+## Favorites and contact
+
+<AccordionGroup>
+  <Accordion title="How do I save a product to favorites?">
+    You must be logged in to save favorites. On any product card or product detail page, click the **heart icon** to add it to your list.
+
+    Access all your saved products at `/favoritos` from the main navigation menu.
+
+    <Info>
+      Favorites are stored on your account, so they persist across devices and sessions as long as you are logged in.
+    </Info>
+  </Accordion>
+
+  <Accordion title="How do I contact an entrepreneur?">
+    SENAshopping does not process purchases or payments. Contact is made directly with the entrepreneur via WhatsApp.
+
+    On the product detail page (`/productos/:id`), click the **Contactar emprendedor** button. This opens WhatsApp with a pre-filled message about the specific product, so the entrepreneur has all the context they need.
+  </Accordion>
+</AccordionGroup>
+
+## Privacy and security
+
+<AccordionGroup>
+  <Accordion title="Are my personal details safe?">
+    Yes. Passwords are stored encrypted using the bcrypt algorithm and are never stored or transmitted in plain text. No member of the team has access to your original password.
+
+    Authentication uses JWT tokens stored in `localStorage`. These tokens expire automatically.
+
+    The only personal data shared with other users is the phone number of entrepreneurs — this is made visible so that users can contact them via WhatsApp. See the [privacy policy](/support/privacy) for full details.
+  </Accordion>
+
+  <Accordion title="Is SENAshopping officially affiliated with SENA?">
+    No. SENAshopping is an academic project developed by students. It has no official affiliation with the Servicio Nacional de Aprendizaje (SENA). Any reference to SENA is only to provide context about the background of the participating entrepreneurs.
+  </Accordion>
+</AccordionGroup>

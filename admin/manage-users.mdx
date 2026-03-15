@@ -1,0 +1,132 @@
+---
+title: "Managing users"
+description: "Approve or reject pending entrepreneur accounts, and block or unblock any user from the admin panel."
+---
+
+The **Gestionar Usuarios** page at `/admin/usuarios` is where administrators review new entrepreneur registrations and control the status of every account on the platform.
+
+<Warning>
+  This page is protected by `ProtectedRoute` with `requiredRole="administrador"`. Accessing `/admin/usuarios` without the correct role redirects to `/`.
+</Warning>
+
+## Loading the user list
+
+On mount, the page fetches every user from the backend:
+
+```javascript
+// src/pages/Admin/GestionarUsuarios.jsx
+useEffect(() => {
+  fetch("http://localhost:3000/api/users", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => res.json())
+    .then(setUsers)
+    .catch(() => setUsers([]))
+    .finally(() => setLoading(false));
+}, []);
+```
+
+While the request is in flight, the page renders a skeleton UI via `GestionarUsuariosSkeleton`. Once the data arrives, users are split into two lists:
+
+- **Pending** — accounts with `status === "pendiente"`, shown in a dedicated approval section at the top
+- **All other users** — shown in a table below
+
+## User fields
+
+Each user object returned by the API contains the following fields:
+
+| Field | Values | Description |
+|---|---|---|
+| `id` | number | Unique user identifier |
+| `full_name` | string | User's full name |
+| `email` | string | Email address |
+| `phone` | string \| null | Phone number, or `null` if not provided |
+| `role` | `usuario` \| `emprendedor` \| `administrador` | Account role |
+| `status` | `activo` \| `pendiente` \| `inactivo` \| `bloqueado` | Account status |
+
+## Approving and rejecting pending accounts
+
+When an entrepreneur registers, their account starts with `status: "pendiente"`. The pending section appears only when at least one account is in this state.
+
+Each pending card shows the user's name, email, phone number, and role badge. Two action buttons are available:
+
+<Steps>
+  <Step title="Approve the account">
+    Click **✓ Aprobar**. This calls:
+
+    ```javascript
+    handleStatusChange(user.id, "activo")
+    ```
+
+    The account becomes active and the entrepreneur can start publishing products.
+  </Step>
+  <Step title="Reject the account">
+    Click **✕ Rechazar**. This calls:
+
+    ```javascript
+    handleStatusChange(user.id, "inactivo")
+    ```
+
+    The account is set to inactive. The user can no longer log in.
+  </Step>
+</Steps>
+
+## Changing user status
+
+The `handleStatusChange` function sends a `PUT` request to update a user's status:
+
+```javascript
+// src/pages/Admin/GestionarUsuarios.jsx
+const handleStatusChange = async (id, status) => {
+  const res = await fetch(`http://localhost:3000/api/users/${id}/status`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  const data = await res.json();
+
+  if (res.ok) {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, ...data.user } : u))
+    );
+    setMensaje({ tipo: "exito", texto: "Estado actualizado correctamente" });
+    setTimeout(() => setMensaje(null), 3000);
+  }
+};
+```
+
+On success, the local user list updates immediately — no full page reload is required. A success or error notification appears at the top of the page and auto-dismisses after 3 seconds.
+
+## Status actions in the user table
+
+For each non-pending user, the table renders a contextual action button based on current status:
+
+| Current status | Button label | New status after click |
+|---|---|---|
+| `activo` | **Bloquear** | `bloqueado` |
+| `bloqueado` | **Desbloquear** | `activo` |
+| `inactivo` | **Activar** | `activo` |
+
+<Note>
+  Blocked (`bloqueado`) users cannot log in. This status is distinct from `inactivo`, which is typically assigned to rejected registrations.
+</Note>
+
+## Role and status badges
+
+The user table displays colour-coded badges for role and status:
+
+| Role | Badge colour |
+|---|---|
+| `emprendedor` | Green |
+| `usuario` | Blue / grey |
+
+| Status | Badge colour |
+|---|---|
+| `activo` | Green |
+| `pendiente` | Yellow |
+| `inactivo` | Red |
+| `bloqueado` | Styled via `styles.bloqueado` |

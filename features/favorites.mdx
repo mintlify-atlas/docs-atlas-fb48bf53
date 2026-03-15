@@ -1,0 +1,73 @@
+---
+title: "Favorites"
+description: "How users save, remove, and view favorite products. Requires authentication."
+---
+
+Any user with `role: "usuario"` can save products to a personal favorites list. Favorites are stored server-side and associated with the authenticated user's account. The feature is surfaced in two places: the heart icon on every `ProductCard`, and the dedicated `/favoritos` page.
+
+<Info>
+The heart icon is hidden for `emprendedor` and `administrador` roles. Only `usuario` accounts can add favorites.
+</Info>
+
+## Route
+
+`/favoritos` is wrapped with `ProtectedRoute` in `App.jsx`. Unauthenticated visitors are redirected to `/auth`.
+
+## Saving a favorite
+
+The heart button is rendered in the top-right corner of every `ProductCard`. When clicked:
+
+1. If the user is not logged in, they are redirected to `/auth` with the state message `"Ingresa para poder guardar tus favoritos ❤️"`, which is displayed as a toast on the auth page.
+2. If the user is logged in and the product is **not** yet a favorite, the component sends:
+
+```http
+POST http://localhost:3000/api/favorites
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "product_id": 3 }
+```
+
+The heart icon fills solid and the local `isFavorite` state flips to `true`.
+
+## Removing a favorite
+
+If the product is already a favorite, clicking the heart removes it:
+
+```http
+DELETE http://localhost:3000/api/favorites/:id
+Authorization: Bearer <token>
+```
+
+The heart icon returns to the outlined state and `isFavorite` flips to `false`.
+
+<Note>
+The heart button calls `e.stopPropagation()` to prevent the card click handler from navigating to the product detail page at the same time.
+</Note>
+
+## Checking favorite status on card load
+
+Each `ProductCard` fetches the full favorites list when it mounts (if a token is present) to determine whether to render the heart as filled or outlined:
+
+```http
+GET http://localhost:3000/api/favorites
+Authorization: Bearer <token>
+```
+
+The component checks whether the current card's `id` appears in the returned array (`favorites.some((f) => f.id === id)`).
+
+## Viewing the favorites list
+
+The `Favorites` page at `/favoritos` makes the same request on mount:
+
+```http
+GET http://localhost:3000/api/favorites
+Authorization: Bearer <token>
+```
+
+While loading, 8 `ProductSkeleton` cards are rendered as placeholders. Once resolved:
+
+- If `favorites.length === 0`, an empty state is shown with an **Explorar productos →** link to `/productos`.
+- Otherwise, the count of saved products is displayed (`N productos guardados`) and the full list is rendered as a grid of `ProductCard` components.
+
+The same add/remove heart interactions work on these cards, so users can remove favorites directly from the `/favoritos` page.

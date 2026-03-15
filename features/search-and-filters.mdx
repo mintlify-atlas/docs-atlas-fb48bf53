@@ -1,0 +1,163 @@
+---
+title: "Search and filters"
+description: "Global search from the header, URL-driven text search, and the client-side filter bar on the product catalog page."
+---
+
+Sena Shopping combines a global header search with a client-side filter bar on the product catalog. Search is URL-driven and works with filters simultaneously.
+
+## Global search
+
+The `Header` component contains a search input rendered in two forms:
+
+- **Desktop**: An always-visible input bar in the header.
+- **Mobile**: A modal overlay triggered by the **Buscar** button in the mobile menu.
+
+Both inputs behave identically: pressing **Enter** navigates to the product catalog with the query encoded in the URL:
+
+```
+/productos?q=<encoded search term>
+```
+
+For example, searching for `cuero` navigates to:
+
+```
+/productos?q=cuero
+```
+
+### Autocomplete suggestions
+
+As the user types, the Header fetches suggestions with a **300 ms debounce**:
+
+```http
+GET http://localhost:3000/api/products/suggestions?q=<query>
+```
+
+The response is an array of lightweight product objects. Each suggestion shows the product's `image_url`, `name`, and `category`. Clicking a suggestion navigates directly to `/productos/:id` without going through the catalog page. The suggestion dropdown closes automatically when the user clicks outside it.
+
+<Tip>
+Suggestions only appear when the typed query is at least 1 character long and the API returns at least one result.
+</Tip>
+
+## Text search in the catalog
+
+The `Products` page reads the `q` parameter from the URL with `useSearchParams`:
+
+```jsx
+const [searchParams] = useSearchParams();
+const query = searchParams.get("q") || "";
+```
+
+When `q` is non-empty, the component filters the fetched products array to items where the query string (lowercased) is found in any of these four fields:
+
+| Field | Description |
+|---|---
+| `name` | Product title
+| `description` | Product description text
+| `category` | Category name
+| `entrepreneur` | Entrepreneur's full name
+
+The matching is case-insensitive (`toLowerCase()` on both sides). The page heading changes to `Resultados para: "<query>"` while a search is active.
+
+<Note>
+Text search is applied first, before the filter bar controls. Filters then narrow the already-searched set.
+</Note>
+
+## Filter bar
+
+The filter bar sits between the page heading and the product grid. All four filters operate on the in-memory product array — no additional API calls are made.
+
+### Category filter
+
+A `<select>` dropdown. The option list is built dynamically from the unique `category` values in the fetched products array:
+
+```js
+const categorias = [...new Set(products.map((p) => p.category))];
+```
+
+The default option is **Todas las categorías** (`value=""`). Selecting a category retains only products where `p.category === filtroCategoria`.
+
+### Sort order filter
+
+A `<select>` with three options:
+
+| Value | Label | Logic |
+|---|---|---
+| `precio_asc` | Menor precio | `sort((a, b) => Number(a.price) - Number(b.price))`
+| `precio_desc` | Mayor precio | `sort((a, b) => Number(b.price) - Number(a.price))`
+| `reciente` | Más reciente | `sort((a, b) => b.id - a.id)`
+
+The default empty value leaves the server-returned order unchanged.
+
+### Price range filters
+
+Two `<input type="number">` fields with `min="0"`:
+
+- **Precio mín**: Keeps products where `Number(p.price) >= Number(precioMin)`.
+- **Precio máx**: Keeps products where `Number(p.price) <= Number(precioMax)`.
+
+Both fields are independent. You can set only one bound, or both, or neither.
+
+## Combined filter logic
+
+All active filters are applied in sequence to produce the final displayed array:
+
+```js
+// 1. Text search (from ?q= URL param)
+let filteredProducts = query
+  ? products.filter((p) =>
+      p.name.toLowerCase().includes(query.toLowerCase()) ||
+      p.description.toLowerCase().includes(query.toLowerCase()) ||
+      p.category.toLowerCase().includes(query.toLowerCase()) ||
+      p.entrepreneur.toLowerCase().includes(query.toLowerCase())
+    )
+  : products;
+
+// 2. Category
+if (filtroCategoria) {
+  filteredProducts = filteredProducts.filter((p) => p.category === filtroCategoria);
+}
+
+// 3. Minimum price
+if (precioMin !== "") {
+  filteredProducts = filteredProducts.filter((p) => Number(p.price) >= Number(precioMin));
+}
+
+// 4. Maximum price
+if (precioMax !== "") {
+  filteredProducts = filteredProducts.filter((p) => Number(p.price) <= Number(precioMax));
+}
+
+// 5. Sort
+if (filtroOrden === "precio_asc") {
+  filteredProducts = [...filteredProducts].sort((a, b) => Number(a.price) - Number(b.price));
+} else if (filtroOrden === "precio_desc") {
+  filteredProducts = [...filteredProducts].sort((a, b) => Number(b.price) - Number(a.price));
+} else if (filtroOrden === "reciente") {
+  filteredProducts = [...filteredProducts].sort((a, b) => b.id - a.id);
+}
+```
+
+## Clearing all filters
+
+The **✕ Limpiar** button appears in the filter bar as soon as any filter control has a non-empty value:
+
+```js
+const hayFiltros = filtroCategoria || filtroOrden || precioMin || precioMax;
+```
+
+Clicking the button resets all four filter states:
+
+```js
+const limpiarFiltros = () => {
+  setFiltroCategoria("");
+  setFiltroOrden("");
+  setPrecioMin("");
+  setPrecioMax("");
+};
+```
+
+A second **Limpiar filtros** button also appears inside the empty state when no products match the active filters.
+
+<Note>
+Clearing filters does not clear the `?q=` URL parameter. To remove an active text search, the user must clear the search input in the header and press Enter, or navigate to `/productos` directly.
+</Note>

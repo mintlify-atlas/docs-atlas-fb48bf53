@@ -1,0 +1,210 @@
+---
+title: "Introduction"
+description: "An overview of Sena Shopping — the React + Vite marketplace frontend built for SENA entrepreneurs in Colombia."
+---
+
+Sena Shopping is a marketplace frontend built for SENA (Servicio Nacional de Aprendizaje) entrepreneurs to publish and sell their products to customers across Colombia. The application is a single-page app written in React 19, bundled by Vite 7, and communicates with a Node.js REST API over HTTP. Entrepreneurs register their products, customers browse and save favorites, and administrators moderate the platform from a dedicated dashboard.
+
+<Info>
+  Sena Shopping is a frontend-only application. It requires a separate backend REST API running at `http://localhost:3000/api` to handle authentication, product data, and user management.
+</Info>
+
+## Project structure
+
+The source code lives entirely under `src/`. The directory layout follows a feature-oriented convention:
+
+<Tree>
+  <Tree.Folder name="src" defaultOpen>
+    <Tree.File name="App.jsx" />
+    <Tree.File name="main.jsx" />
+    <Tree.File name="index.css" />
+    <Tree.Folder name="pages" defaultOpen>
+      <Tree.File name="Index/" />
+      <Tree.File name="Auth/" />
+      <Tree.File name="Products/" />
+      <Tree.File name="ProductDetail/" />
+      <Tree.File name="Entrepreneur/" />
+      <Tree.File name="ListaEmprendedores/" />
+      <Tree.File name="Favorites/" />
+      <Tree.File name="Perfil/" />
+      <Tree.File name="Admin/" />
+      <Tree.File name="ForgotPassword/" />
+      <Tree.File name="ResetPassword/" />
+      <Tree.File name="Terminos/" />
+      <Tree.File name="Privacidad/" />
+      <Tree.File name="FAQ/" />
+    </Tree.Folder>
+    <Tree.Folder name="components" defaultOpen>
+      <Tree.File name="Layout/" />
+      <Tree.File name="Header/" />
+      <Tree.File name="Footer/" />
+      <Tree.File name="Hero/" />
+      <Tree.File name="ProductCard/" />
+      <Tree.File name="ProtectedRoute/" />
+      <Tree.File name="SplashScreen/" />
+      <Tree.File name="ScrollToTop/" />
+      <Tree.File name="UltimosProductos/" />
+    </Tree.Folder>
+    <Tree.Folder name="services">
+      <Tree.File name="authService.js" />
+    </Tree.Folder>
+    <Tree.Folder name="mocks">
+      <Tree.File name="productsMock.json" />
+      <Tree.File name="productDetailMock.json" />
+    </Tree.Folder>
+    <Tree.Folder name="assets" />
+  </Tree.Folder>
+</Tree>
+
+| Directory | Purpose |
+|---|---|
+| `src/pages/` | Full-page route components, one folder per route |
+| `src/components/` | Reusable UI components shared across pages |
+| `src/services/` | Functions that call the backend REST API |
+| `src/mocks/` | Static JSON fixtures used for development and testing |
+| `src/assets/` | Static images and other binary assets |
+
+## User roles
+
+The platform defines three distinct roles. A user's role is set at registration time and is stored inside the JWT payload and the `user` object in `localStorage`.
+
+<CardGroup cols={3}>
+  <Card title="Customer (usuario)" icon="user">
+    Browse the product catalog, search by keyword, filter by category and price, save products to a personal favorites list, and view entrepreneur profiles.
+  </Card>
+  <Card title="Entrepreneur (emprendedor)" icon="store">
+    Publish new products with images, descriptions, and pricing. Edit or delete existing listings. Manage their public profile on the platform.
+  </Card>
+  <Card title="Administrator (administrador)" icon="shield">
+    Access the admin dashboard with platform-wide statistics. Manage all user accounts and product listings. Generate PDF reports using jsPDF.
+  </Card>
+</CardGroup>
+
+Protected routes use the `<ProtectedRoute>` component, which reads the stored JWT and optionally checks the `requiredRole` prop before rendering the page. Attempting to access `/admin` without the `administrador` role redirects the user away.
+
+## Backend API connection
+
+All API calls target `http://localhost:3000/api`. The auth service (`src/services/authService.js`) targets the `/auth` namespace directly:
+
+```javascript src/services/authService.js
+const API_URL = "http://localhost:3000/api/auth";
+
+export const loginUser = async (email, password) => {
+  const response = await fetch(`${API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message);
+  return data;
+};
+
+export const registerUser = async (full_name, email, password, role, phone) => {
+  const response = await fetch(`${API_URL}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ full_name, email, password, role, phone }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message);
+  return data;
+};
+```
+
+Other service modules follow the same `fetch`-based pattern, constructing their URLs relative to `http://localhost:3000/api`.
+
+## JWT authentication
+
+After a successful login or registration, the backend returns a JWT and a user object. The frontend stores both in `localStorage` under fixed keys:
+
+| Key | Value |
+|---|---|
+| `"token"` | The raw JWT string sent as a `Bearer` token on subsequent requests |
+| `"user"` | A JSON-serialised object containing the user's id, name, email, and role |
+
+Components that need the current user read from `localStorage.getItem("user")` and parse the JSON. Protected routes check for the presence of `"token"` to determine whether the user is authenticated.
+
+## Global session interceptor
+
+`App.jsx` installs a monkey-patch over `window.fetch` on mount to handle expired sessions automatically. When any request to `localhost:3000` returns a `401 Unauthorized` response, the interceptor clears both `localStorage` keys and navigates the user to `/auth`:
+
+```javascript src/App.jsx
+useEffect(() => {
+  const originalFetch = window.fetch;
+
+  window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+
+    if (response.status === 401) {
+      const url = args[0];
+      if (typeof url === "string" && url.includes("localhost:3000")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/auth";
+      }
+    }
+
+    return response;
+  };
+
+  return () => {
+    window.fetch = originalFetch;
+  };
+}, []);
+```
+
+The interceptor is scoped to requests that target `localhost:3000`, so third-party fetches (e.g., Google Fonts) are not affected. The original `fetch` is restored when the component unmounts.
+
+## Splash screen
+
+On first load, `App.jsx` renders the `<SplashScreen />` component while the application initialises. The splash screen is hidden after 2.5 seconds via a `setTimeout`:
+
+```javascript src/App.jsx
+const [showSplash, setShowSplash] = useState(true);
+
+useEffect(() => {
+  const timer = setTimeout(() => setShowSplash(false), 2500);
+  return () => clearTimeout(timer);
+}, []);
+```
+
+The `SplashScreen` component is rendered above all routes and is removed from the DOM once `showSplash` becomes `false`.
+
+## Tech stack
+
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19.2 | UI component framework |
+| Vite | 7.2 | Dev server, bundler, and HMR |
+| React Router | 7.13 | Client-side routing via `BrowserRouter` |
+| react-hot-toast | 2.6 | Toast notification system |
+| jsPDF + jspdf-autotable | 4.2 + 5.0 | PDF report generation in the admin panel |
+| lucide-react | 0.564 | SVG icon library |
+| CSS Modules | — | Component-scoped styles |
+| Poppins (Google Fonts) | — | Primary typeface set in `src/index.css` |
+
+The Vite config (`vite.config.js`) uses only the official `@vitejs/plugin-react` plugin with no additional customisation, keeping the build setup minimal.
+
+## Feature overview
+
+<CardGroup cols={2}>
+  <Card title="Product catalog" icon="grid" href="/features/product-catalog">
+    Full product listing with category filtering, price range controls, and sort options including newest, lowest price, and highest price.
+  </Card>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    JWT-based login and registration with automatic session expiry handling, password recovery, and role-based access control.
+  </Card>
+  <Card title="Entrepreneur panel" icon="pen-to-square" href="/features/entrepreneur-panel">
+    Create, edit, and delete product listings. Each entrepreneur has a public profile page listing all their active products.
+  </Card>
+  <Card title="Admin dashboard" icon="gauge" href="/admin/overview">
+    Platform statistics, user management, product moderation, and PDF report generation via jsPDF.
+  </Card>
+  <Card title="Favorites" icon="heart" href="/features/favorites">
+    Authenticated customers can save products to a personal favorites list and access it from the `/favoritos` route.
+  </Card>
+  <Card title="Search and filters" icon="magnifying-glass" href="/features/search-and-filters">
+    Real-time search across product names, descriptions, categories, and entrepreneur names.
+  </Card>
+</CardGroup>

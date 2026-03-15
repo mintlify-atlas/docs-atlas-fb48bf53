@@ -1,0 +1,240 @@
+---
+title: "Project structure"
+description: "A tour of the Sena Shopping source tree — how pages, components, services, and assets are organized."
+---
+
+## Directory tree
+
+```text
+senashopping/
+├── public/                        # Static files served at the root URL
+│   ├── logo.png
+│   └── vite.svg
+├── src/
+│   ├── App.jsx                    # Root component: routes, splash, global fetch interceptor
+│   ├── main.jsx                   # React entry point, mounts BrowserRouter + App
+│   ├── index.css                  # Global baseline styles
+│   ├── assets/                    # Bundled static assets (imported by components)
+│   │   ├── logo.png
+│   │   └── react.svg
+│   ├── components/                # Reusable UI components
+│   │   ├── Footer/
+│   │   │   ├── Footer.jsx
+│   │   │   └── Footer.module.css
+│   │   ├── GestionarProductosSkeleton/
+│   │   │   ├── GestionarProductosSkeleton.jsx
+│   │   │   └── GestionarProductosSkeleton.module.css
+│   │   ├── GestionarUsuariosSkeleton/
+│   │   │   ├── GestionarUsuariosSkeleton.jsx
+│   │   │   └── GestionarUsuariosSkeleton.module.css
+│   │   ├── Header/
+│   │   │   ├── Header.jsx
+│   │   │   └── Header.module.css
+│   │   ├── Hero/
+│   │   │   ├── Hero.jsx
+│   │   │   └── Hero.module.css
+│   │   ├── Layout/
+│   │   │   └── Layout.jsx
+│   │   ├── ListaEmprendedoresSkeleton/
+│   │   │   ├── ListaEmprendedoresSkeleton.jsx
+│   │   │   └── ListaEmprendedoresSkeleton.module.css
+│   │   ├── MisProductosSkeleton/
+│   │   │   ├── MisProductosSkeleton.jsx
+│   │   │   └── MisProductosSkeleton.module.css
+│   │   ├── ProductCard/
+│   │   │   ├── ProductCard.jsx
+│   │   │   └── ProductCard.module.css
+│   │   ├── ProductDetailSkeleton/
+│   │   │   ├── ProductDetailSkeleton.jsx
+│   │   │   └── ProductDetailSkeleton.module.css
+│   │   ├── ProductSkeleton/
+│   │   │   ├── ProductSkeleton.jsx
+│   │   │   └── ProductSkeleton.module.css
+│   │   ├── ProtectedRoute/
+│   │   │   └── ProtectedRoute.jsx
+│   │   ├── ScrollToTop/
+│   │   │   └── ScrollToTop.jsx
+│   │   ├── SplashScreen/
+│   │   │   ├── SplashScreen.jsx
+│   │   │   └── SplashScreen.module.css
+│   │   └── UltimosProductos/
+│   │       ├── UltimosProductos.jsx
+│   │       └── UltimosProductos.module.css
+│   ├── mocks/                     # Static JSON data for development/testing
+│   │   ├── productDetailMock.json
+│   │   └── productsMock.json
+│   ├── pages/                     # Page-level components, grouped by feature
+│   │   ├── Admin/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Dashboard.module.css
+│   │   │   ├── GestionarProductos.jsx
+│   │   │   ├── GestionarProductos.module.css
+│   │   │   ├── GestionarUsuarios.jsx
+│   │   │   └── GestionarUsuarios.module.css
+│   │   ├── Auth/
+│   │   │   ├── Auth.jsx
+│   │   │   └── Auth.module.css
+│   │   ├── Entrepreneur/
+│   │   │   ├── CrearProducto.jsx
+│   │   │   ├── CrearProducto.module.css
+│   │   │   ├── EditarProducto.jsx
+│   │   │   ├── MisProductos.jsx
+│   │   │   └── MisProductos.module.css
+│   │   ├── FAQ/
+│   │   │   ├── FAQ.jsx
+│   │   │   └── FAQ.module.css
+│   │   ├── Favorites/
+│   │   │   ├── Favorites.jsx
+│   │   │   └── Favorites.module.css
+│   │   ├── ForgotPassword/
+│   │   │   ├── ForgotPassword.jsx
+│   │   │   └── ForgotPassword.module.css
+│   │   ├── Index/
+│   │   │   └── Index.jsx
+│   │   ├── ListaEmprendedores/
+│   │   │   ├── ListaEmprendedores.jsx
+│   │   │   └── ListaEmprendedores.module.css
+│   │   ├── Perfil/
+│   │   │   ├── Perfil.jsx
+│   │   │   └── Perfil.module.css
+│   │   ├── Privacidad/
+│   │   │   ├── Privacidad.jsx
+│   │   │   └── Privacidad.module.css
+│   │   ├── ProductDetail/
+│   │   │   ├── ProductDetail.jsx
+│   │   │   └── ProductDetail.module.css
+│   │   ├── Products/
+│   │   │   ├── Products.jsx
+│   │   │   └── Products.module.css
+│   │   ├── ResetPassword/
+│   │   │   ├── ResetPassword.jsx
+│   │   │   └── ResetPassword.module.css
+│   │   └── Terminos/
+│   │       ├── Terminos.jsx
+│   │       └── Terminos.module.css
+│   └── services/                  # API service modules
+│       └── authService.js
+├── eslint.config.js
+├── index.html
+├── package.json
+└── vite.config.js
+```
+
+## Top-level directories
+
+<CardGroup cols={2}>
+  <Card title="src/pages/" icon="file">
+    Page-level components grouped by feature domain. Each subdirectory maps to one user-facing section of the app: **Admin** (Dashboard, GestionarProductos, GestionarUsuarios), **Auth** (login/register), **Entrepreneur** (CrearProducto, EditarProducto, MisProductos), **Favorites**, **Perfil**, and public informational pages (FAQ, Terminos, Privacidad).
+  </Card>
+  <Card title="src/components/" icon="puzzle">
+    Reusable UI building blocks consumed by multiple pages. Includes structural components (Header, Footer, Layout), utility components (ProtectedRoute, ScrollToTop, SplashScreen), content components (ProductCard, Hero, UltimosProductos), and a full set of skeleton loading-state components.
+  </Card>
+  <Card title="src/services/" icon="gear">
+    Thin API client modules. Currently contains `authService.js`, which exports `loginUser` and `registerUser` functions. Each function calls the REST API, parses the JSON response, and throws an `Error` with `data.message` when the response is not OK.
+  </Card>
+  <Card title="src/mocks/" icon="database">
+    Static JSON fixtures used during development and testing when the backend is unavailable. `productsMock.json` contains a flat list of 12 products; `productDetailMock.json` is a map from product ID to a full detail object with images, description, and specifications.
+  </Card>
+  <Card title="src/assets/" icon="image">
+    Static files that are imported directly into component source (e.g., `import logo from '../../assets/logo.png'`). Vite processes these through its asset pipeline, applies content-hash fingerprinting, and emits them into `dist/assets/` at build time.
+  </Card>
+  <Card title="public/" icon="globe">
+    Files served verbatim from the root URL without bundler processing. `logo.png` here is accessible at `/logo.png` at runtime. Prefer `src/assets/` for files referenced in JSX; use `public/` only for files that need a stable, predictable URL (e.g., favicons, manifests).
+  </Card>
+</CardGroup>
+
+## CSS Modules
+
+Every component that needs scoped styles ships a sibling `*.module.css` file:
+
+```text
+Header/
+├── Header.jsx
+└── Header.module.css   ← imported as `styles` inside Header.jsx
+```
+
+Styles are imported and applied like this:
+
+```jsx
+import styles from "./Header.module.css";
+
+<header className={styles.header}>
+  <div className={styles.container}>…</div>
+</header>
+```
+
+Vite's CSS Modules support transforms class names into locally-scoped identifiers (e.g., `Header_header__3xKQp`), preventing any cross-component style leakage without requiring a naming convention like BEM.
+
+<Note>
+  `ProtectedRoute`, `ScrollToTop`, and `Layout` have no `.module.css` file — they render no visible markup of their own, or delegate all styling to their children.
+</Note>
+
+## Skeleton components
+
+Every data-heavy page has a dedicated skeleton component that mirrors its layout structure with animated placeholder blocks. These are rendered while the real API call is in flight, giving users an immediate sense of the incoming content without layout shift.
+
+| Skeleton component | Used on page |
+|---|---|
+| `ProductSkeleton` | Products listing (`/productos`) |
+| `ProductDetailSkeleton` | Product detail (`/productos/:id`) |
+| `MisProductosSkeleton` | Mis productos (`/mis-productos`) |
+| `ListaEmprendedoresSkeleton` | Emprendedores listing (`/emprendedores`) |
+| `GestionarProductosSkeleton` | Admin — manage products (`/admin/productos`) |
+| `GestionarUsuariosSkeleton` | Admin — manage users (`/admin/usuarios`) |
+
+## Vite configuration
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+The configuration uses the official `@vitejs/plugin-react` plugin, which provides:
+
+- **Fast Refresh** — React component state is preserved across hot module replacements during development.
+- **JSX transform** — No need to manually import React in every file; the automatic JSX runtime is injected by the plugin.
+- **Babel integration** — The plugin uses Babel under the hood for JSX and Fast Refresh support.
+
+All other Vite defaults apply: `src/main.jsx` is the entry point (referenced in `index.html`), the dev server runs on port `5173`, and production output goes to `dist/`.
+
+## ESLint configuration
+
+```js
+// eslint.config.js
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import { defineConfig, globalIgnores } from 'eslint/config'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{js,jsx}'],
+    extends: [
+      js.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+])
+```
+
+The project uses ESLint v9's flat config format. The `no-unused-vars` rule is configured to ignore identifiers that start with an uppercase letter or underscore — a common React pattern where imported page components are technically "used" only inside JSX and would otherwise trigger false positives.
